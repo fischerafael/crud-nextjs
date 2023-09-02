@@ -1,49 +1,39 @@
 import { Transaction, TransactionType } from "./entities";
+import { TransactionRepositoryInMemory } from "./repository";
 
 export class TransactionUseCases {
-  private transactionsInMemory: Transaction[] = [];
+  constructor(readonly repository: TransactionRepositoryInMemory) {}
 
-  createTransaction(amount: number, type: TransactionType) {
+  async createTransaction(amount: number, type: TransactionType) {
     const transaction = new Transaction(amount, type);
-    this.transactionsInMemory.push(transaction);
+    await this.repository.create(transaction);
   }
 
-  readAllTransactions() {
-    const transactions = this.transactionsInMemory;
+  async readAllTransactions() {
+    const transactions = await this.repository.list();
     return transactions;
   }
 
-  readTransaction(id: string) {
-    const transaction = this.transactionsInMemory.find(
-      (tr) => tr.getId() === id
-    );
+  async readTransaction(id: string) {
+    const transaction = await this.repository.findById(id);
     if (!transaction) throw new Error("Not Found");
     return transaction;
   }
 
-  updateTransaction(
+  async updateTransaction(
     id: string,
     values: { amount?: number; type?: TransactionType }
   ) {
-    const updatedTransactions = this.transactionsInMemory.map((tr) => {
-      if (tr.getId() === id) {
-        const newAmount = values.amount || tr.getAmount();
-        const newType = values.type || tr.getType();
-        const newTransaction = new Transaction(newAmount, newType);
-        newTransaction.setId(tr.getId());
-        return newTransaction;
-      }
-      return tr;
-    });
-
-    this.transactionsInMemory = updatedTransactions;
+    const transaction = await this.repository.findById(id);
+    if (!transaction) throw new Error("Not Found");
+    transaction.setAmount(values.amount || transaction.getAmount());
+    transaction.setType(values.type || transaction.getType());
+    await this.repository.update(transaction);
   }
 
-  deleteTransaction(id: string) {
-    const updatedTransactions = this.transactionsInMemory.filter(
-      (tr) => tr.getId() !== id
-    );
-
-    this.transactionsInMemory = updatedTransactions;
+  async deleteTransaction(id: string) {
+    const transaction = await this.repository.findById(id);
+    if (!transaction) throw new Error("Not Found");
+    await this.repository.delete(id);
   }
 }

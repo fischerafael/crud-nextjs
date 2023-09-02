@@ -1,33 +1,40 @@
+import { TransactionRepositoryInMemory } from "@/server/repository";
 import { TransactionUseCases } from "@/server/use-cases";
 import type { NextApiRequest, NextApiResponse } from "next";
 
-const transactionUseCase = new TransactionUseCases();
+const repository = new TransactionRepositoryInMemory();
+const transactionUseCase = new TransactionUseCases(repository);
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const { method, body, query } = req;
   const { id } = query;
   try {
     if (method === "POST") {
-      transactionUseCase.createTransaction(body.amount, body.type);
+      await transactionUseCase.createTransaction(body.amount, body.type);
       return res.status(201).json({ message: "Ok" });
     }
 
     if (method === "PUT") {
-      transactionUseCase.updateTransaction(id as string, body);
+      await transactionUseCase.updateTransaction(id as string, body);
       return res.status(200).json({ message: "Ok" });
     }
 
     if (method === "DELETE") {
-      transactionUseCase.deleteTransaction(id as string);
+      await transactionUseCase.deleteTransaction(id as string);
       return res.status(200).json({ message: "Ok" });
     }
 
     if (!!id) {
-      const transactions = transactionUseCase.readTransaction(id as string);
+      const transactions = await transactionUseCase.readTransaction(
+        id as string
+      );
       return res.status(200).json({ data: transactions });
     }
 
-    const transactions = transactionUseCase.readAllTransactions();
+    const transactions = await transactionUseCase.readAllTransactions();
     return res.status(200).json({ data: transactions });
   } catch (e: any) {
     return res.status(500).json({ message: e.message });
